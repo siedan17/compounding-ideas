@@ -1,113 +1,195 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def simulate_kelly(n, p=0.55, T=1000, f_values=None, random_seed=None):
+###############################################################################
+#               EXPLICIT SIMULATION PARAMETERS (TWEAK AS NEEDED)              #
+###############################################################################
+# Probability of winning each coin toss
+P = 0.55
+
+# Multipliers for the fraction f bet:
+# Win => multiply wealth by (1 + a*f)
+# Lose => multiply wealth by (1 - b*f)
+a = 0.85
+b = 0.65
+
+# Number of simulations (Monte Carlo paths) per fraction
+T = 2000
+
+# List of number of coin tosses to explore
+N_LIST = [100, 200, 400, 800, 1600, 3200]
+
+# Range of fractions of wealth to bet
+F_VALUES = np.linspace(0, 0.8, 51)
+
+# Random seed for reproducibility (set to None for different runs each time)
+SEED = 42
+
+###############################################################################
+#                           KELLY ANALYTICAL FRACTION                          #
+###############################################################################
+def kelly_fraction(p, a, b):
+    """
+    Compute the Kelly fraction for the scenario:
+    Win => multiply by (1 + a*f)
+    Lose => multiply by (1 - b*f)
+
+    Maximizes p * ln(1 + a f) + (1-p) * ln(1 - b f).
+
+    f_Kelly = [p * a - (1 - p) * b] / (a * b)
+    """
+    # The raw formula:
+    f_k = (p * a - (1 - p) * b) / (a * b)
+    return f_k
+
+###############################################################################
+#                       KELLY SIMULATION (DISTRIBUTION) FUNCTION               #
+###############################################################################
+def simulate_kelly_distribution(n, p, T, f_values, a=1.0, b=1.0, random_seed=None):
     """
     Simulate a coin-toss betting game for various fractions of wealth.
+    Final wealth is multiplied by (1 + a*f) on a win, or (1 - b*f) on a loss.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     n : int
         Number of coin tosses in each simulation.
     p : float
-        Probability of winning a single coin toss. (Default=0.55)
+        Probability of winning a single coin toss.
     T : int
-        Number of simulations for each fraction f. (Default=10,000)
+        Number of simulated paths for each fraction f.
     f_values : array-like
         Array of fractions of wealth to bet each toss.
-        If None, it defaults to np.linspace(0, 1, 21).
-    random_seed : int
+    a : float
+        Win multiplier coefficient.
+    b : float
+        Loss multiplier coefficient.
+    random_seed : int or None
         Optional random seed for reproducibility.
 
-    Returns:
-    --------
-    f_values, median_wealths, p5_wealths
-        Arrays of fraction values, median final wealth, and 5th percentile wealth
-        after n tosses, respectively.
+    Returns
+    -------
+    f_values : np.ndarray
+        Fractions of wealth bet.
+    p10_wealths : np.ndarray
+        10th percentile of final wealth for each fraction f.
+    p50_wealths : np.ndarray
+        50th percentile (median) of final wealth for each fraction f.
+    p90_wealths : np.ndarray
+        90th percentile of final wealth for each fraction f.
     """
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    if f_values is None:
-        # By default, consider fractions from 0 to 1 in 21 steps
-        f_values = np.linspace(0, 1, 21)
+    p10_wealths = np.zeros_like(f_values)
+    p50_wealths = np.zeros_like(f_values)
+    p90_wealths = np.zeros_like(f_values)
 
-    # Preallocate arrays
-    median_wealths = np.zeros_like(f_values)
-    p5_wealths     = np.zeros_like(f_values)
-
-    # Run simulation for each fraction f
     for i, f in enumerate(f_values):
         final_wealth = np.zeros(T)
 
-        # Simulate T paths
         for t in range(T):
-            w = 1.0  # start wealth
-            # Run n coin tosses
+            w = 1.0  # start with wealth = 1
             for _ in range(n):
-                # Generate random coin toss
+                # Coin toss
                 if np.random.rand() < p:
-                    # Win => multiply wealth by (1+f)
-                    w *= (1 + f)
+                    w *= (1 + a * f)  # Win
                 else:
-                    # Lose => multiply wealth by (1-f)
-                    w *= (1 - f)
+                    w *= (1 - b * f)  # Lose
             final_wealth[t] = w
 
-        # Compute median & 5th percentile of final wealth
-        median_wealths[i] = np.median(final_wealth)
-        p5_wealths[i]     = np.percentile(final_wealth, 5)
+        # Compute the 10th, 50th, and 90th percentiles of final wealth
+        p10_wealths[i] = (np.percentile(final_wealth, 5) +
+                          np.percentile(final_wealth, 10) +
+                          np.percentile(final_wealth, 15)) / 3
+        p50_wealths[i] = (np.percentile(final_wealth, 45) +
+                          np.percentile(final_wealth, 50) +
+                          np.percentile(final_wealth, 55)) / 3
+        p90_wealths[i] = (np.percentile(final_wealth, 85) +
+                          np.percentile(final_wealth, 90) +
+                          np.percentile(final_wealth, 95)) / 3
 
-    return f_values, median_wealths, p5_wealths
+    return f_values, p10_wealths, p50_wealths, p90_wealths
 
-def plot_all_kelly_results(n_list, results):
-    _, axes = plt.subplots(len(n_list), 1, figsize=(10, 6 * len(n_list)))
-    for ax, n in zip(axes, n_list):
-        f_values, median_wealth, p5_wealth = results[n]
 
-        # Find the fraction that maximizes the median and 5th percentile
-        idx_median_max = np.argmax(median_wealth)
-        idx_p5_max = np.argmax(p5_wealth)
+###############################################################################
+#                                 PLOTTING FUNCTION                            #
+###############################################################################
+def plot_kelly_results(n, f_values, p10, p50, p90, p, a, b):
+    """
+    Plot the 10th, 50th, and 90th percentile final wealth vs fraction f,
+    along with the analytical Kelly fraction and the f-values that maximize
+    each percentile.
+    """
+    # Discrete maxima
+    idx_max_p10 = np.argmax(p10)
+    idx_max_p50 = np.argmax(p50)
+    idx_max_p90 = np.argmax(p90)
 
-        f_opt_median = f_values[idx_median_max]
-        f_opt_p5 = f_values[idx_p5_max]
+    f_opt_p10 = f_values[idx_max_p10]
+    f_opt_p50 = f_values[idx_max_p50]
+    f_opt_p90 = f_values[idx_max_p90]
 
-        # Plot curves
-        ax.plot(f_values, median_wealth, label='Median Final Wealth', marker='o')
-        ax.plot(f_values, p5_wealth, label='5th Percentile Wealth', marker='o', linestyle='--')
+    # Analytical Kelly fraction
+    f_kelly = kelly_fraction(p, a, b)
 
-        # Mark optima
-        ax.scatter(f_opt_median, median_wealth[idx_median_max], color='red', zorder=5,
-                    label=f'Median Opt (f={f_opt_median:.2f})')
-        ax.scatter(f_opt_p5, p5_wealth[idx_p5_max], color='green', zorder=5,
-                    label=f'5th Perc Opt (f={f_opt_p5:.2f})')
+    # Create a new figure for this value of n
+    plt.figure(figsize=(10, 6))
+    plt.rcParams.update({
+    'font.size': 16,
+    'axes.titlesize': 20,
+    'axes.labelsize': 14,
+    'xtick.labelsize': 12,
+    'ytick.labelsize': 12,
+    'legend.fontsize': 15,
+    'lines.linewidth': 2.5,
+    'grid.linewidth': 1.5,
+    'axes.linewidth': 1.5,
+    })
 
-        # Add vertical dashed lines for optima
-        ax.axvline(f_opt_median, color='red', linestyle='--', label='Median Opt Line')
-        ax.axvline(f_opt_p5, color='green', linestyle='--', label='5th Perc Opt Line')
+    # Plot the percentiles
+    plt.plot(f_values, p10, label='10th Percentile', color='blue', marker='o')
+    plt.plot(f_values, p50, label='50th Percentile (Median)', color='green', marker='o')
+    plt.plot(f_values, p90, label='90th Percentile', color='orange', marker='o')
 
-        ax.set_title(f'Kelly Criterion Simulation (n={n})')
-        ax.set_xlabel('Fraction of Wealth Bet (f)')
-        ax.set_ylabel('Final Wealth (log scale)')
-        ax.set_yscale('log')
-        ax.legend(loc="lower left")
-        ax.grid(True, which="both", linestyle='--', linewidth=0.5)
+    # Plot vertical lines for the discrete fractions that maximize each percentile
+    plt.axvline(f_opt_p10, color='blue', linestyle='--',
+                label=f'Max 10% @ f={f_opt_p10:.3f}')
+    plt.axvline(f_opt_p50, color='green', linestyle='--',
+                label=f'Max 50% @ f={f_opt_p50:.3f}')
+    plt.axvline(f_opt_p90, color='orange', linestyle='--',
+                label=f'Max 90% @ f={f_opt_p90:.3f}')
 
+    # Plot the analytical Kelly fraction as a red dashed line (if it lies in [0,1], we still show it even if outside)
+    plt.axvline(f_kelly, color='red', linestyle='--', label=f'Kelly @ f={f_kelly:.3f}')
+
+    # Thicker horizontal line at y = 0 in linear scale
+    plt.axhline(1, color='black', linewidth=2)
+
+    plt.title(f'Kelly Simulation (t={n}, p={p:.2f}, a={a}, b={b})')
+    plt.xlabel('Fraction of Wealth Bet (f)')
+    plt.ylabel('Final Wealth (log scale)')
+    plt.yscale('log')
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.legend(loc='best', framealpha=1)
     plt.tight_layout()
-    plt.show()
 
+    # plt.show()
+    plt.savefig(f'kelly_sim_{n}.png', dpi=300, bbox_inches='tight', format='png')
+
+
+###############################################################################
+#                                MAIN SCRIPT                                  #
+###############################################################################
 if __name__ == "__main__":
-    n_list = [100, 200, 400, 800, 1600, 3200]
-    seed = 42
-    results = {}
-    for n in n_list:
-        f_vals, med_wealth, p5_wealth = simulate_kelly(
+    for n in N_LIST:
+        f_vals, p10_vals, p50_vals, p90_vals = simulate_kelly_distribution(
             n=n,
-            p=0.65,
-            T=1000,
-            f_values=np.linspace(0, 0.4, 31),
-            random_seed=seed
+            p=P,
+            T=T,
+            f_values=F_VALUES,
+            a=a,
+            b=b,
+            random_seed=SEED
         )
-        results[n] = (f_vals, med_wealth, p5_wealth)
-
-    plot_all_kelly_results(n_list, results)
+        plot_kelly_results(n, f_vals, p10_vals, p50_vals, p90_vals, P, a, b)
