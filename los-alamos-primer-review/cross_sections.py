@@ -55,18 +55,18 @@ fig, ax = plt.subplots(figsize=(8, 6))
 
 # Plot the curves for each isotope; note that the curves are only defined up to x = 7,
 # but we set the x-axis limit to 8 for styling.
-ax.plot(x, sigma_u235, marker='o', color="blue", linestyle='-', label=r'U-235 $(n,f)$')
-ax.plot(x, sigma_pu239, marker='s', color="orange", linestyle='-', label=r'Pu-239 $(n,f)$')
-ax.plot(x, sigma_u238, marker='^', color="green", linestyle='-', label=r'U-238 $(n,f)$')
+ax.plot(x, sigma_u238, marker='^', color="green", linestyle='-', label='U-238')
+ax.plot(x, sigma_u235, marker='o', color="blue", linestyle='-', label='U-235')
+ax.plot(x, sigma_pu239, marker='s', color="orange", linestyle='-', label='Pu-239')
 
 # Set x-axis and y-axis limits.
 ax.set_xlim([-2, 8])
 ax.set_ylim([1e-25, 2e-21])
 
 # Set labels and title.
-ax.set_xlabel(r'$\log_{10}(E/\mathrm{eV})$')
+ax.set_xlabel(r'Energy in $\log_{10}$(eV)')
 ax.set_ylabel(r'Fission cross section, $\sigma_f$ [cm$^2$]')
-ax.set_title('Synthetic Fission Cross Sections for U-235, Pu-239, and U-238')
+ax.set_title('Fission Cross Sections for U-235, Pu-239, and U-238')
 
 # Use a logarithmic scale for the y-axis.
 ax.set_yscale('log')

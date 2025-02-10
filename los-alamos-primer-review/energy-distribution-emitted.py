@@ -18,7 +18,7 @@ mean_pu239 = 1.5 * T_pu239 # ~2.1 MeV
 mean_u238 = 1.5 * T_u238   # ~2.3 MeV
 
 # Define energy grid from 0 to 4 MeV
-E = np.linspace(0, 4, 1000)
+E = np.linspace(0, 8, 2000)
 
 # Compute Maxwellian spectra for each isotope
 f_u235 = maxwellian(E, T_u235)
@@ -29,26 +29,26 @@ f_u238 = maxwellian(E, T_u238)
 # U-235: blue, U-238: orange, Pu-239: green.
 fig, ax = plt.subplots(figsize=(8, 6))
 
-ax.plot(E, f_u235, label=r'U-235 $(n,f)$', lw=2, color='blue')
-ax.plot(E, f_u238, label=r'U-238 $(n,f)$', lw=2, color='orange')
-ax.plot(E, f_pu239, label=r'Pu-239 $(n,f)$', lw=2, color='green')
+ax.plot(E, f_u238, label='U-238', lw=2, color='green')
+ax.plot(E, f_u235, label='U-235', lw=2, color='blue')
+ax.plot(E, f_pu239, label='Pu-239', lw=2, color='orange')
 
 # Plot vertical lines for the means
+ax.axvline(mean_u238, color='green', linestyle='--', lw=1.5,
+           label=r'U-238 mean = {:.1f} MeV'.format(mean_u238))
 ax.axvline(mean_u235, color='blue', linestyle='--', lw=1.5,
            label=r'U-235 mean = {:.1f} MeV'.format(mean_u235))
-ax.axvline(mean_u238, color='orange', linestyle='--', lw=1.5,
-           label=r'U-238 mean = {:.1f} MeV'.format(mean_u238))
-ax.axvline(mean_pu239, color='green', linestyle='--', lw=1.5,
+ax.axvline(mean_pu239, color='orange', linestyle='--', lw=1.5,
            label=r'Pu-239 mean = {:.1f} MeV'.format(mean_pu239))
 
 # Set axis limits
-ax.set_xlim([0, 4.5])  # Extend x-axis to 4.5 MeV for style
+ax.set_xlim([0, 8.0])  # Extend x-axis to 4.5 MeV for style
 ax.set_ylim([0, 0.5])  # Adjust y-axis for clarity
 
 # Set labels and title
 ax.set_xlabel('Neutron energy (MeV)', fontsize=12)
 ax.set_ylabel('Normalized Probability Density', fontsize=12)
-ax.set_title('Synthetic Prompt Fission Neutron Spectra', fontsize=14)
+ax.set_title('Fission Neutron Spectra', fontsize=14)
 
 # Add gridlines and legend
 ax.grid(True, linestyle='--', linewidth=0.5)
